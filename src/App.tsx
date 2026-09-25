@@ -1,12 +1,17 @@
 import React, { useState } from 'react';
 import { Header } from './components/layout/Header';
 import { Footer } from './components/layout/Footer';
-import { CameraViewportShell } from './components/camera/CameraViewportShell';
+import { CameraViewport } from './components/camera/CameraViewport';
+import { CameraTestPanel } from './components/camera/CameraTestPanel';
 import { TranslationPanelShell } from './components/translation/TranslationPanelShell';
+import { useCamera } from './hooks/useCamera';
 import type { ConnectionStatus } from './types';
 
 export const App: React.FC = () => {
-  // Phase 1 Application Shell State Initializer
+  // Phase 2 Camera Hook Instance (Exposes videoRef & stream independently for future MediaPipe consumption)
+  const camera = useCamera();
+
+  // Application Connection & System State
   const [connectionStatus] = useState<ConnectionStatus>('MOCK_MODE');
   const [isOnline] = useState<boolean>(navigator.onLine);
   const [mediapipeReady] = useState<boolean>(false);
@@ -19,14 +24,17 @@ export const App: React.FC = () => {
 
       {/* Main Responsive Grid Workspace */}
       <main className="main-content">
-        {/* Left Column: Camera Preview & Canvas Skeleton Overlay Viewport */}
-        <CameraViewportShell />
+        {/* Left Column: Active Camera Feed Viewport & Phase 2 Test Verification Panel */}
+        <div className="flex flex-col gap-4">
+          <CameraViewport camera={camera} />
+          <CameraTestPanel camera={camera} />
+        </div>
 
-        {/* Right Column: Live Translation Captions, Controls & History Log */}
+        {/* Right Column: Live Translation Captions Shell */}
         <TranslationPanelShell />
       </main>
 
-      {/* Bottom Engine Telemetry Footer */}
+      {/* Bottom Telemetry Footer */}
       <Footer mediapipeReady={mediapipeReady} fps={fps} />
     </div>
   );

@@ -5,14 +5,20 @@
 export type ConnectionStatus = 'DISCONNECTED' | 'CONNECTING' | 'CONNECTED' | 'RECONNECTING' | 'MOCK_MODE';
 
 export type CameraPermissionState = 'prompt' | 'granted' | 'denied';
+export type CameraFacingMode = 'user' | 'environment';
 
 export interface CameraState {
   permission: CameraPermissionState;
   isActive: boolean;
+  isInitializing: boolean;
   selectedDeviceId: string | null;
+  facingMode: CameraFacingMode;
   availableDevices: MediaDeviceInfo[];
-  aspectRatio: number;
-  error: string | null;
+  resolution: { width: number; height: number };
+  error: {
+    code: 'NOT_ALLOWED' | 'NOT_FOUND' | 'NOT_READABLE' | 'OVERCONSTRAINED' | 'UNKNOWN';
+    message: string;
+  } | null;
 }
 
 export interface MediaPipeStatus {
