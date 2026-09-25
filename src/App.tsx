@@ -3,19 +3,22 @@ import { Header } from './components/layout/Header';
 import { Footer } from './components/layout/Footer';
 import { CameraViewport } from './components/camera/CameraViewport';
 import { CameraTestPanel } from './components/camera/CameraTestPanel';
+import { MediaPipeTestPanel } from './components/camera/MediaPipeTestPanel';
 import { TranslationPanelShell } from './components/translation/TranslationPanelShell';
 import { useCamera } from './hooks/useCamera';
+import { useMediaPipe } from './hooks/useMediaPipe';
 import type { ConnectionStatus } from './types';
 
 export const App: React.FC = () => {
-  // Phase 2 Camera Hook Instance (Exposes videoRef & stream independently for future MediaPipe consumption)
+  // Phase 2 Camera Hook Instance
   const camera = useCamera();
+
+  // Phase 3 MediaPipe Vision Hook Instance (Consumes camera independently)
+  const mediapipe = useMediaPipe();
 
   // Application Connection & System State
   const [connectionStatus] = useState<ConnectionStatus>('MOCK_MODE');
   const [isOnline] = useState<boolean>(navigator.onLine);
-  const [mediapipeReady] = useState<boolean>(false);
-  const [fps] = useState<number>(0);
 
   return (
     <div className="app-container">
@@ -24,9 +27,10 @@ export const App: React.FC = () => {
 
       {/* Main Responsive Grid Workspace */}
       <main className="main-content">
-        {/* Left Column: Active Camera Feed Viewport & Phase 2 Test Verification Panel */}
+        {/* Left Column: Camera Viewport, Canvas Skeleton Overlay & Phase 3 Inspector */}
         <div className="flex flex-col gap-4">
-          <CameraViewport camera={camera} />
+          <CameraViewport camera={camera} mediapipe={mediapipe} />
+          <MediaPipeTestPanel mediapipe={mediapipe} />
           <CameraTestPanel camera={camera} />
         </div>
 
@@ -35,7 +39,7 @@ export const App: React.FC = () => {
       </main>
 
       {/* Bottom Telemetry Footer */}
-      <Footer mediapipeReady={mediapipeReady} fps={fps} />
+      <Footer mediapipeReady={mediapipe.mediapipeStatus.isReady} fps={mediapipe.mediapipeStatus.fps} />
     </div>
   );
 };
