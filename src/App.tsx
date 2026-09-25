@@ -1,24 +1,39 @@
-import React, { useState } from 'react';
+import React, { useEffect } from 'react';
 import { Header } from './components/layout/Header';
 import { Footer } from './components/layout/Footer';
 import { CameraViewport } from './components/camera/CameraViewport';
 import { CameraTestPanel } from './components/camera/CameraTestPanel';
 import { MediaPipeTestPanel } from './components/camera/MediaPipeTestPanel';
-import { TranslationPanelShell } from './components/translation/TranslationPanelShell';
+import { TranslationPanel } from './components/translation/TranslationPanel';
 import { useCamera } from './hooks/useCamera';
 import { useMediaPipe } from './hooks/useMediaPipe';
-import type { ConnectionStatus } from './types';
+import { useTranslationEngine } from './hooks/useTranslationEngine';
+import { useAppStore } from './state/useAppStore';
 
 export const App: React.FC = () => {
   // Phase 2 Camera Hook Instance
   const camera = useCamera();
 
-  // Phase 3 MediaPipe Vision Hook Instance (Consumes camera independently)
+  // Phase 3 MediaPipe Vision Hook Instance
   const mediapipe = useMediaPipe();
 
-  // Application Connection & System State
-  const [connectionStatus] = useState<ConnectionStatus>('MOCK_MODE');
-  const [isOnline] = useState<boolean>(navigator.onLine);
+  // Phase 4 Translation Engine Hook Instance
+  const { sendLandmarkFrame, toggleSession, triggerManualDemoGesture } = useTranslationEngine();
+
+  // Global State Store
+  const { connectionStatus } = useAppStore();
+  const isOnline = navigator.onLine;
+
+  // Pipeline Bridge: Pipe extracted MediaPipe frames to active Translation Provider
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (mediapipe.latestFrameRef.current) {
+        sendLandmarkFrame(mediapipe.latestFrameRef.current);
+      }
+    }, 80); // ~12.5 FPS stream interval to translation provider
+
+    return () => clearInterval(interval);
+  }, [mediapipe.latestFrameRef, sendLandmarkFrame]);
 
   return (
     <div className="app-container">
@@ -27,15 +42,19 @@ export const App: React.FC = () => {
 
       {/* Main Responsive Grid Workspace */}
       <main className="main-content">
-        {/* Left Column: Camera Viewport, Canvas Skeleton Overlay & Phase 3 Inspector */}
+        {/* Left Column: Camera Viewport, Canvas Skeleton Overlay & MediaPipe Telemetry */}
         <div className="flex flex-col gap-4">
           <CameraViewport camera={camera} mediapipe={mediapipe} />
           <MediaPipeTestPanel mediapipe={mediapipe} />
           <CameraTestPanel camera={camera} />
         </div>
 
-        {/* Right Column: Live Translation Captions Shell */}
-        <TranslationPanelShell />
+        {/* Right Column: Live Translation Panel & Demo Presentation Controls */}
+        <TranslationPanel
+          isCameraActive={camera.cameraState.isActive}
+          toggleSession={toggleSession}
+          triggerManualDemoGesture={triggerManualDemoGesture}
+        />
       </main>
 
       {/* Bottom Telemetry Footer */}
