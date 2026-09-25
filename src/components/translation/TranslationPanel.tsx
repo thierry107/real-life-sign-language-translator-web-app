@@ -1,5 +1,6 @@
 import React from 'react';
 import { MessageSquareText, Volume2, VolumeX, Trash2, Globe, Sparkles, Activity, Play, Pause, Hand } from 'lucide-react';
+import { EngineModeSelector } from '../status/EngineModeSelector';
 import { useAppStore } from '../../state/useAppStore';
 
 interface TranslationPanelProps {
@@ -15,6 +16,7 @@ export const TranslationPanel: React.FC<TranslationPanelProps> = ({
 }) => {
   const {
     isTranslating,
+    mode,
     currentGloss,
     currentSentence,
     confidence,
@@ -51,6 +53,9 @@ export const TranslationPanel: React.FC<TranslationPanelProps> = ({
         </div>
       </div>
 
+      {/* Engine Provider Switcher (Mock vs FastAPI WebSocket) */}
+      <EngineModeSelector />
+
       {/* Primary Output Caption Box */}
       <div className="flex flex-col gap-3">
         <div className="bg-slate-900/90 border border-slate-800/80 rounded-xl p-5 flex flex-col justify-between min-h-[170px] relative overflow-hidden shadow-inner">
@@ -61,12 +66,12 @@ export const TranslationPanel: React.FC<TranslationPanelProps> = ({
             </span>
             <span
               className={`px-2.5 py-0.5 rounded text-[10px] font-semibold border ${
-                isTranslating
-                  ? 'bg-purple-950/80 text-purple-300 border-purple-800/60'
-                  : 'bg-slate-800 text-slate-400 border-slate-700'
+                mode === 'LIVE_WEBSOCKET'
+                  ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800/60'
+                  : 'bg-purple-950/80 text-purple-300 border-purple-800/60'
               }`}
             >
-              {isTranslating ? 'Mock Engine Processing' : 'Session Paused'}
+              {mode === 'LIVE_WEBSOCKET' ? 'FastAPI WebSocket Active' : 'Deterministic Mock Active'}
             </span>
           </div>
 
@@ -94,40 +99,42 @@ export const TranslationPanel: React.FC<TranslationPanelProps> = ({
       </div>
 
       {/* Controlled Manual Gesture Trigger Bar (Hackathon Demo Suite) */}
-      <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-slate-950/60 border border-purple-900/40">
-        <div className="flex items-center justify-between text-[11px] text-purple-300 font-semibold">
-          <span className="flex items-center gap-1">
-            <Hand className="w-3.5 h-3.5 text-purple-400" />
-            Controlled Demo Triggers (Presentation Suite):
-          </span>
+      {mode === 'MOCK_LOCAL' && (
+        <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-slate-950/60 border border-purple-900/40">
+          <div className="flex items-center justify-between text-[11px] text-purple-300 font-semibold">
+            <span className="flex items-center gap-1">
+              <Hand className="w-3.5 h-3.5 text-purple-400" />
+              Controlled Demo Triggers (Presentation Suite):
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5 pt-1">
+            <button
+              onClick={() => triggerManualDemoGesture('HELLO', 'Hello!')}
+              className="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-slate-900 hover:bg-purple-950 border border-purple-800/50 text-purple-200 transition-colors"
+            >
+              ✋ HELLO
+            </button>
+            <button
+              onClick={() => triggerManualDemoGesture('YES', 'Yes')}
+              className="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-slate-900 hover:bg-purple-950 border border-purple-800/50 text-purple-200 transition-colors"
+            >
+              👍 YES
+            </button>
+            <button
+              onClick={() => triggerManualDemoGesture('PEACE', 'Peace')}
+              className="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-slate-900 hover:bg-purple-950 border border-purple-800/50 text-purple-200 transition-colors"
+            >
+              ✌️ PEACE
+            </button>
+            <button
+              onClick={() => triggerManualDemoGesture('THANK YOU', 'Thank you')}
+              className="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-slate-900 hover:bg-purple-950 border border-purple-800/50 text-purple-200 transition-colors"
+            >
+              ✊ THANK YOU
+            </button>
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-1.5 pt-1">
-          <button
-            onClick={() => triggerManualDemoGesture('HELLO', 'Hello!')}
-            className="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-slate-900 hover:bg-purple-950 border border-purple-800/50 text-purple-200 transition-colors"
-          >
-            ✋ HELLO
-          </button>
-          <button
-            onClick={() => triggerManualDemoGesture('YES', 'Yes')}
-            className="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-slate-900 hover:bg-purple-950 border border-purple-800/50 text-purple-200 transition-colors"
-          >
-            👍 YES
-          </button>
-          <button
-            onClick={() => triggerManualDemoGesture('PEACE', 'Peace')}
-            className="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-slate-900 hover:bg-purple-950 border border-purple-800/50 text-purple-200 transition-colors"
-          >
-            ✌️ PEACE
-          </button>
-          <button
-            onClick={() => triggerManualDemoGesture('THANK YOU', 'Thank you')}
-            className="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-slate-900 hover:bg-purple-950 border border-purple-800/50 text-purple-200 transition-colors"
-          >
-            ✊ THANK YOU
-          </button>
-        </div>
-      </div>
+      )}
 
       {/* Transcript History Log */}
       <div className="flex-1 flex flex-col gap-2 min-h-[140px] max-h-[220px]">
@@ -183,7 +190,7 @@ export const TranslationPanel: React.FC<TranslationPanelProps> = ({
           {isTranslating ? (
             <>
               <Pause className="w-4 h-4" />
-              <span>Pause Translation</span>
+              <span>Pause Translation Session</span>
             </>
           ) : (
             <>

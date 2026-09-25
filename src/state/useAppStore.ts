@@ -4,6 +4,7 @@ import type { ConnectionStatus, PredictionResult } from '../types';
 export interface AppStoreState {
   // Connection State
   connectionStatus: ConnectionStatus;
+  serverUrl: string;
   
   // Translation Session State
   isTranslating: boolean;
@@ -19,6 +20,7 @@ export interface AppStoreState {
   
   // Actions
   setConnectionStatus: (status: ConnectionStatus) => void;
+  setServerUrl: (url: string) => void;
   setTranslating: (translating: boolean) => void;
   setMode: (mode: 'MOCK_LOCAL' | 'LIVE_WEBSOCKET') => void;
   receivePrediction: (prediction: PredictionResult) => void;
@@ -30,6 +32,7 @@ export interface AppStoreState {
 export const useAppStore = create<AppStoreState>((set) => ({
   // Defaults
   connectionStatus: 'MOCK_MODE',
+  serverUrl: 'ws://localhost:8000/api/v1/translate/ws',
   isTranslating: false,
   mode: 'MOCK_LOCAL',
   currentGloss: 'WAITING FOR SIGN',
@@ -41,6 +44,8 @@ export const useAppStore = create<AppStoreState>((set) => ({
 
   // Actions
   setConnectionStatus: (status) => set({ connectionStatus: status }),
+  
+  setServerUrl: (url) => set({ serverUrl: url }),
   
   setTranslating: (translating) => set({ isTranslating: translating }),
   
