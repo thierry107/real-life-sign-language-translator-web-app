@@ -69,6 +69,7 @@ export function useTranslationEngine() {
   // Transmit extracted landmark frame to active translation provider
   const sendLandmarkFrame = useCallback(
     (frame: ExtractedFrameData) => {
+      // Session Lifecycle Rule: Only transmit frames when translation session is ACTIVE
       if (!providerRef.current || !isTranslating) return;
 
       const payload: FrameLandmarks = {
@@ -83,8 +84,14 @@ export function useTranslationEngine() {
     [isTranslating]
   );
 
+  // Toggle session state & renew session ID on WebSocket provider when starting
   const toggleSession = useCallback(() => {
-    setTranslating(!isTranslating);
+    const nextState = !isTranslating;
+    setTranslating(nextState);
+
+    if (nextState && providerRef.current instanceof WebSocketTranslationProvider) {
+      providerRef.current.renewSession();
+    }
   }, [isTranslating, setTranslating]);
 
   const triggerManualDemoGesture = useCallback((gloss: string, text: string) => {

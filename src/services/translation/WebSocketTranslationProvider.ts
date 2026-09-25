@@ -18,10 +18,12 @@ export class WebSocketTranslationProvider implements ITranslationProvider {
   private maxReconnectAttempts = 5;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private pingIntervalTimer: ReturnType<typeof setInterval> | null = null;
+  private lastPingTime = 0;
+  private lastPongTime = 0;
 
-  // Frame Throttling (~25 FPS / 40ms interval)
+  // Frame Rate Transport (25 FPS target / 40ms interval)
   private lastSentFrameTime = 0;
-  private SEND_INTERVAL_MS = 40; // 25 FPS target
+  private SEND_INTERVAL_MS = 40;
 
   constructor(
     serverUrl = 'ws://localhost:8000/api/v1/translate/ws',
@@ -29,11 +31,20 @@ export class WebSocketTranslationProvider implements ITranslationProvider {
   ) {
     this.serverUrl = serverUrl;
     this.targetLanguage = targetLanguage;
-    this.sessionId = `sess_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    this.sessionId = this.generateSessionId();
+  }
+
+  private generateSessionId(): string {
+    return `sess_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
   }
 
   public setServerUrl(url: string) {
     this.serverUrl = url;
+  }
+
+  public renewSession() {
+    this.sessionId = this.generateSessionId();
+    console.log(`[WebSocketProvider] Renewed session ID: ${this.sessionId}`);
   }
 
   async connect(): Promise<void> {
@@ -135,7 +146,7 @@ export class WebSocketTranslationProvider implements ITranslationProvider {
     };
     this.ws?.send(JSON.stringify(configMsg));
 
-    // Start 10-second Ping-Pong Keepalive
+    // Start 10-second Ping-Pong Keepalive & Heartbeat monitor
     this.startHeartbeat();
   }
 
@@ -154,7 +165,8 @@ export class WebSocketTranslationProvider implements ITranslationProvider {
 
         this.predictionCallback?.(result);
       } else if (msg.type === 'pong') {
-        // Heartbeat ACK received
+        // Record active pong timestamp for unresponsiveness verification
+        this.lastPongTime = Date.now();
       } else if (msg.type === 'error') {
         console.error('[WebSocketProvider] Server reported error:', msg.message);
         this.errorCallback?.(msg.message);
@@ -180,17 +192,30 @@ export class WebSocketTranslationProvider implements ITranslationProvider {
     }
   }
 
-  // Heartbeat & Exponential Backoff Reconnect
+  // Heartbeat & Unresponsive Socket Detection
   private startHeartbeat() {
     this.stopHeartbeat();
+    this.lastPingTime = Date.now();
+    this.lastPongTime = Date.now();
+
     this.pingIntervalTimer = setInterval(() => {
-      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-        const pingMsg: ClientWebSocketMessage = {
-          type: 'ping',
-          timestamp: Date.now(),
-        };
-        this.ws.send(JSON.stringify(pingMsg));
+      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+
+      const now = Date.now();
+
+      // Check if previous ping went un-responded for over 6 seconds (Dead connection)
+      if (this.lastPingTime > 0 && this.lastPongTime < this.lastPingTime && now - this.lastPingTime > 6000) {
+        console.warn('[WebSocketProvider] Heartbeat timeout: No pong received from server within 6s. Closing dead socket...');
+        this.ws.close(); // Triggers handleClose -> scheduleReconnect
+        return;
       }
+
+      this.lastPingTime = now;
+      const pingMsg: ClientWebSocketMessage = {
+        type: 'ping',
+        timestamp: now,
+      };
+      this.ws.send(JSON.stringify(pingMsg));
     }, 10000);
   }
 

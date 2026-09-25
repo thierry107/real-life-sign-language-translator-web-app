@@ -24,13 +24,17 @@ export const App: React.FC = () => {
   const { connectionStatus } = useAppStore();
   const isOnline = navigator.onLine;
 
-  // Pipeline Bridge: Pipe extracted MediaPipe frames to active Translation Provider
+  // Pipeline Bridge: Transmit each MediaPipe frame EXACTLY ONCE
+  const lastSentTimestampRef = React.useRef<number>(0);
+
   useEffect(() => {
     const interval = setInterval(() => {
-      if (mediapipe.latestFrameRef.current) {
-        sendLandmarkFrame(mediapipe.latestFrameRef.current);
+      const frame = mediapipe.latestFrameRef.current;
+      if (frame && frame.timestamp !== lastSentTimestampRef.current) {
+        lastSentTimestampRef.current = frame.timestamp;
+        sendLandmarkFrame(frame);
       }
-    }, 80); // ~12.5 FPS stream interval to translation provider
+    }, 25); // Check frequently, transmit ONLY when timestamp changes
 
     return () => clearInterval(interval);
   }, [mediapipe.latestFrameRef, sendLandmarkFrame]);
